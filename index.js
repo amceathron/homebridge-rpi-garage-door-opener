@@ -11,7 +11,7 @@ module.exports = function(homebridge) {
   Characteristic = homebridge.hap.Characteristic;
   DoorState = homebridge.hap.Characteristic.CurrentDoorState;
 
-  homebridge.registerAccessory("homebridge-rasppi-gpio-garagedoor", "RaspPiGPIOGarageDoor", RaspPiGPIOGarageDoorAccessory);
+  homebridge.registerAccessory("homebridge-rpi-garage-door-opener", "RaspPiGPIOGarageDoor", RaspPiGPIOGarageDoorAccessory);
 };
 
 function RaspPiGPIOGarageDoorAccessory(log, config) {
