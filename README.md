@@ -1,5 +1,14 @@
-# homebridge-rasppi-gpio-garagedoor
+# homebridge-rpi-garage-door-opener
 Raspberry Pi GPIO GarageDoor plugin for [HomeBridge](https://github.com/nfarina/homebridge)
+
+# Before you start
+You will need the following hardware components for your project:
+* Raspberry Pi
+* Relay that will turn your garage door opener on and off
+* Reed switch that will detect when your garage door is closed
+* Optional reed switch that will detect when your garage door is fully open. I intend to support configuration without this switch but I have not tested it yet.
+
+If you don't have reed switches or you want to have just one switch that detects when you garage door is fully open. please rather use [homebridge-rasppi-gpio-garagedoor](https://github.com/benlamonica/homebridge-rasppi-gpio-garagedoor).
 
 # Circuit
   This plugin assumes that you are using a Raspberry Pi to directly control your garage door. Garage Door openers usually have
