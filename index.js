@@ -28,7 +28,7 @@ function RaspPiGPIOGarageDoorAccessory(log, config) {
   this.doorSwitchPin = config["doorSwitchPin"];
   this.relayOn = config["doorSwitchValue"];
   this.doorSwitchPressTimeInMs = (config["doorSwitchPressTime"] || 0.5) * 1000;
-  this.relayIdleInMs = (config["relayIdleTime"] || 0.5) * 1000;
+  this.relayIdleInMs = (config["doorSwitchIdleTime"] || 0.5) * 1000;
   if (this.doorSwitchPin === undefined || this.relayOn === undefined) {
     log("ERROR! No RELAY. Configuration is not supported.");
     process.exit(1);
@@ -41,7 +41,7 @@ function RaspPiGPIOGarageDoorAccessory(log, config) {
   }
 
   this.closedDoorSensorPin = config["closedDoorSensorPin"];
-  this.closedDoorSensorValue = config["closedDoorSensorValue"];
+  this.closedDoorSensorValue = config["closedDoorSensorValue"] || 0;
   if (!this.hasClosedSensor()) {
     log("ERROR! No CLOSED SENSOR. Configuration is not supported.");
     process.exit(1);
@@ -52,7 +52,7 @@ function RaspPiGPIOGarageDoorAccessory(log, config) {
   }
 
   this.openDoorSensorPin = config["openDoorSensorPin"];
-  this.openDoorSensorValue = config["openDoorSensorValue"];
+  this.openDoorSensorValue = config["openDoorSensorValue"] || 0;
   if (this.hasOpenSensor()) {
     log("Door open sensor: Configured");
     log("    Door open sensor pin: " + this.openDoorSensorPin);
