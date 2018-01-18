@@ -59,30 +59,30 @@ Configuration sample:
         {
             "accessory": "RaspPiGPIOGarageDoor",
             "name": "Garage Door",
-            "doorSwitchPin": 23,
-            "doorSwitchPressTimeInMs": 1000,
-            "doorSwitchValue": 1,
+            "doorSwitchPin": 7,
+            "doorSwitchValue": 0,
+            "doorSwitchPressTime": 0.5,
+            "doorSwitchIdleTime": 0.5,
             "closedDoorSensorPin": 24,
             "closedDoorSensorValue": 1,
             "openDoorSensorPin": 25,
             "openDoorSensorValue": 1,
-            "doorPollInMs": 4000,
-            "doorOpensInSeconds": 14
+            "doorPollTime": 1,
+            "doorOpenTime": 15
         }
     ],
 ```
 
 Fields: 
 
-* name - Can be anything (required)
-* doorSwitchPin - The physical GPIO pin number that controls the relay to trigger the garage door
-* doorSwitchPressTimeInMs - number of milliseconds to trigger the garage door button. defaults to 1000 millseconds (1 second) if not specified
-* doorSwitchValue - 1 = ACTIVE_HIGH, 0 = ACTIVE_LOW, defaults to 1 if not specified. Set to 0 if you have a relay that requires the signal to be 0v to trigger.
-* closedDoorSensorPin - The physical GPIO pin that senses if the door is closed, do not specify if no sensor present
-* closedDoorSensorValue - 1 = ACTIVE_HIGH, 0 = ACTIVE_LOW, defaults to 1 if not specified
-* openDoorSensorPin - **OPTIONAL** Omit line if you don't have an open sensor. The physical GPIO pin that senses if the door is open, do not specify if no sensor present
-* openDoorSensorValue - **OPTIONAL** Omit line if you don't have an open sensor.  1 = ACTIVE_HIGH, 0 = ACTIVE_LOW, defaults to 1 if not specified
-* doorPollInMs - Number of milliseconds to wait before polling the doorSensorPin to report if the door is open or closed
-* doorOpensInSeconds - Number of seconds it takes your garage door to open or close (err on the side of being longer than it actually takes)
-
-
+* name (required) - Can be anything.
+* doorSwitchPin (required) - The physical GPIO pin number that controls the relay to trigger the garage door.
+* doorSwitchValue (required) - 1 = ACTIVE_HIGH, 0 = ACTIVE_LOW. Set to 0 if you have a relay that requires the signal to be 0v to trigger.
+* doorSwitchPressTime (optional) - Number of seconds to trigger the garage door button. Defaults to 0.5 seconds if not specified.
+* doorSwitchIdleTime (optional) - Minimum number of seconds between 2 presses of the garage door button. The default value is 0.5 seconds. If doorSwitchPressTime and doorSwitchIdleTime are set to 0.5 seconds and you tap open or close on your phone, the relay will be activated for 0.5 seconds and after that tapping on the phone will be ignored for another 0.5 seconds.
+* closedDoorSensorPin (required) - The physical GPIO pin that senses if the door is closed.
+* closedDoorSensorValue (optional) - 1 = ACTIVE_HIGH, 0 = ACTIVE_LOW. Defaults to 0 if not specified.
+* openDoorSensorPin (optional) - The physical GPIO pin that senses if the door is open. Do not specify if no sensor is present.
+* openDoorSensorValue (optional) - Omit line if you don't have an open sensor. 1 = ACTIVE_HIGH, 0 = ACTIVE_LOW. Defaults to 0 if not specified.
+* doorPollTime (optional) - Number of seconds to wait before polling door sensor pins to report if the door is open or closed. Defaults to 1 if not specified.
+* doorOpenTime (optional) - Number of seconds it takes your garage door to open or close (err on the side of being longer than it actually takes). Defaults to 15 if not specified.
