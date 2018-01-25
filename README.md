@@ -1,5 +1,5 @@
 # homebridge-rpi-garage-door-opener
-Raspberry Pi GPIO GarageDoor plugin for [HomeBridge](https://github.com/nfarina/homebridge)
+Raspberry Pi GPIO GarageDoor plugin for [Homebridge](https://github.com/nfarina/homebridge)
 
 # Before you start
 You will need the following hardware components for your project:
@@ -21,8 +21,6 @@ If you don't have reed switches or you want to have just one switch that detects
 
   ![](https://raw.githubusercontent.com/benlamonica/homebridge-rasppi-gpio-garagedoor/master/images/Relay_Wiring.jpg)
 
-# Installation
-
 ## IMPORTANT NOTE ON PIN SELECTION 
 When the Raspberry Pi reboots GPIO pins are reset to their default state. This can cause your garage door to open without you issuing a command. Please make sure you pick the correct pins so that you don't accidentally have your garage door opening after a power loss.
 
@@ -41,21 +39,11 @@ If your relay triggers when the GPIO pin goes LOW, then pick a pin that starts o
 
 (information comes from https://www.raspberrypi.org/forums/viewtopic.php?f=44&t=24491)
 
---------------------
-
-  1. Install the following software: (assuming you are using debian stretch or later)
-    a. sudo apt-get install libavahi-client-dev nodejs-legacy nodejs npm
-    b. sudo npm install -g --unsafe-perf homebridge
-    c. sudo npm install homebridge-rasppi-gpio-garagedoor -g
-  2. Choose the GPIO pins that you are going to use, following the above information
-  3. Configure the system:
-    a. Create the /var/lib/homebridge directory
-    b. Copy the files from the [scripts/var/lib/homebridge directory](https://github.com/benlamonica/homebridge-rasppi-gpio-garagedoor/tree/master/scripts/) into appropriate locations; scripts/etc/default/homebridge => /etc/default/homebridge, scripts/etc/systemd/system/homebridge.service => /etc/systemd/system/homebridge.service, scripts/etc/var/lib/homebridge/garage-door-gpio => /var/lib/homebridge/garage-door-gpio
-    c. Create the config.json to control homebridge at /var/lib/homebridge/config.json. Here is a sample of a config for [two garage doors](https://raw.githubusercontent.com/benlamonica/homebridge-rasppi-gpio-garagedoor/master/scripts/var/lib/homebridge/config-sample-two-doors.json).
-  4. Run the following commands to enable homebridge
-    a. sudo systemctl daemon-reload
-    b. sudo systemctl enable homebridge
-    c. sudo systemctl start homebridge
+# Installation
+1. [Install Homebridge](https://github.com/nfarina/homebridge/wiki/Running-Homebridge-on-a-Raspberry-Pi)
+1. Install this plugin: sudo npm install github:wacekz/homebridge-rpi-garage-door-opener -g
+1. [Configure](https://github.com/wacekz/homebridge-rpi-garage-door-opener#configuration) the plugin
+1. (Re)start Homebridge
 
 # Configuration
 
@@ -74,13 +62,16 @@ Configuration sample:
             "doorSwitchIdleTime": 0.5,
             "closedDoorSensorPin": 24,
             "closedDoorSensorValue": 1,
+            "closedDoorResistor": 0,
             "openDoorSensorPin": 25,
             "openDoorSensorValue": 1,
+            "openDoorResistor": 0,
             "doorPollTime": 1,
             "doorOpenTime": 15
         }
     ],
 ```
+### Note: This plugin uses physical pin numbering.
 
 Fields: 
 
@@ -91,7 +82,9 @@ Fields:
 * doorSwitchIdleTime (optional) - Minimum number of seconds between 2 presses of the garage door button. The default value is 0.5 seconds. If doorSwitchPressTime and doorSwitchIdleTime are set to 0.5 seconds and you tap open or close on your phone, the relay will be activated for 0.5 seconds and after that tapping on the phone will be ignored for another 0.5 seconds.
 * closedDoorSensorPin (required) - The physical GPIO pin that senses if the door is closed.
 * closedDoorSensorValue (optional) - 1 = ACTIVE_HIGH, 0 = ACTIVE_LOW. Defaults to 0 if not specified.
+* closedDoorResistor (optional) - 0 (default) = internal pull down and pull up resistors disabled, 1 = internal pull down resistor enabled, 2 = internal pull up resistor enabled. Use 0 if you have external resistor otherwise use 1 if your sensor is connected to 3.3V or use 2 if your sensor is connected to ground.
 * openDoorSensorPin (optional) - The physical GPIO pin that senses if the door is open. Do not specify if no sensor is present.
 * openDoorSensorValue (optional) - Omit line if you don't have an open sensor. 1 = ACTIVE_HIGH, 0 = ACTIVE_LOW. Defaults to 0 if not specified.
+* openDoorResistor (optional) - 0 (default) = internal pull down and pull up resistors disabled, 1 = internal pull down resistor enabled, 2 = internal pull up resistor enabled. Use 0 if you have external resistor otherwise use 1 if your sensor is connected to 3.3V or use 2 if your sensor is connected to ground.
 * doorPollTime (optional) - Number of seconds to wait before polling door sensor pins to report if the door is open or closed. Defaults to 1 if not specified.
 * doorOpenTime (optional) - Number of seconds it takes your garage door to open or close (err on the side of being longer than it actually takes). Defaults to 15 if not specified.

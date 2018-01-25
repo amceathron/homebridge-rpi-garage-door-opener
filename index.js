@@ -35,28 +35,32 @@ function RaspPiGPIOGarageDoorAccessory(log, config) {
   } else {
     this.relayOff = 1-this.relayOn; //opposite of relayOn (O/1)
     log("Door switch pin: " + this.doorSwitchPin);
-    log("Door switch val: " + (this.relayOn === 1 ? "ACTIVE_HIGH" : "ACTIVE_LOW"));
+    log("Door switch val: " + pinValueToString(this.relayOn));
     log("Door switch press time in ms: " + this.doorSwitchPressTimeInMs);
     log("Door switch idle time in ms: " + this.relayIdleInMs);
   }
 
   this.closedDoorSensorPin = config["closedDoorSensorPin"];
   this.closedDoorSensorValue = config["closedDoorSensorValue"] || 0;
+  this.closedDoorResistor = config["closedDoorResistor"] || 0;
   if (!this.hasClosedSensor()) {
     log("ERROR! No CLOSED SENSOR. Configuration is not supported.");
     process.exit(1);
   } else {
     log("Door closed sensor: Configured");
     log("    Door closed sensor pin: " + this.closedDoorSensorPin);
-    log("    Door closed sensor val: " + (this.closedDoorSensorValue === 1 ? "ACTIVE_HIGH" : "ACTIVE_LOW"));  
+    log("    Door closed sensor val: " + pinValueToString(this.closedDoorSensorValue));  
+    log("    Door closed resistor: " + internalResistorToString(this.closedDoorResistor));  
   }
 
   this.openDoorSensorPin = config["openDoorSensorPin"];
   this.openDoorSensorValue = config["openDoorSensorValue"] || 0;
+  this.openDoorResistor = config["openDoorResistor"] || 0;
   if (this.hasOpenSensor()) {
     log("Door open sensor: Configured");
     log("    Door open sensor pin: " + this.openDoorSensorPin);
-    log("    Door open sensor val: " + (this.openDoorSensorValue ===1 ? "ACTIVE_HIGH" : "ACTIVE_LOW"));
+    log("    Door open sensor val: " + pinValueToString(this.openDoorSensorValue));
+    log("    Door open resistor: " + internalResistorToString(this.openDoorResistor));
   } else {
     log("Door open sensor: Not Configured");
   }
@@ -67,6 +71,30 @@ function RaspPiGPIOGarageDoorAccessory(log, config) {
   log("Door opens in ms: " + this.doorOpensInMs);
 
   this.initService();
+}
+
+function pinValueToString(value) {
+  switch (value) {
+    case 0:
+      return "Active Low";
+    case 1:
+      return "Active High";
+    default:
+      return "UNDEFINED (" + value + ")";
+  }
+}
+
+function internalResistorToString(state) {
+  switch (state) {
+    case rpio.PULL_OFF:
+      return "Disabled";
+    case rpio.PULL_DOWN:
+      return "Pull Down";
+    case rpio.PULL_UP:
+      return "Pull Up";
+    default:
+        return "UNDEFINED (" + state + ")";
+  }
 }
 
 RaspPiGPIOGarageDoorAccessory.prototype = {
@@ -86,9 +114,9 @@ RaspPiGPIOGarageDoorAccessory.prototype = {
       .setCharacteristic(Characteristic.SerialNumber, "Version 1.0.0");
 
     rpio.open(this.doorSwitchPin, rpio.OUTPUT, this.relayOff);
-    rpio.open(this.closedDoorSensorPin, rpio.INPUT);
+    rpio.open(this.closedDoorSensorPin, rpio.INPUT, this.closedDoorResistor);
     if (this.hasOpenSensor())
-      rpio.open(this.openDoorSensorPin, rpio.INPUT);
+      rpio.open(this.openDoorSensorPin, rpio.INPUT, this.openDoorResistor);
 
     this.cachedState = this.determineCurrentDoorState();
     this.targetState = this.cachedState === DoorState.CLOSED ? DoorState.CLOSED : DoorState.OPEN;
