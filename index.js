@@ -93,7 +93,7 @@ function internalResistorToString(state) {
     case rpio.PULL_UP:
       return "Pull Up";
     default:
-        return "UNDEFINED (" + state + ")";
+      return "UNDEFINED (" + state + ")";
   }
 }
 
