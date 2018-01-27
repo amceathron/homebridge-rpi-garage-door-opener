@@ -2,18 +2,18 @@
 Raspberry Pi GPIO garage door plugin for [Homebridge](https://github.com/nfarina/homebridge)
 
 # Before you start
-The project modifies a garage door opener that uses a single momentary push button mounted on the wall to move the garage door. The button moves and stops the door and also changes the direction.
+The project modifies a garage door opener that uses a single momentary push button mounted on the wall. The button moves and stops the door and also changes the direction.
 
 # Hardware components
 You will need the following hardware components for your project:
 * Raspberry Pi
 * Relay that will turn your garage door opener on and off
 * Reed switch that will detect when your garage door is closed
-* Optional reed switch that will detect when your garage door is fully open. I intend to support configuration without this switch but I have not tested it yet.
+* Reed switch that will detect when your garage door is fully open
 
 Visit [Wiki](https://github.com/wacekz/homebridge-rpi-garage-door-opener/wiki) to read about hardware setup.
 
-If you don't have reed switches or you want to have just one switch that detects when your garage door is fully open, please rather use [homebridge-rasppi-gpio-garagedoor](https://github.com/benlamonica/homebridge-rasppi-gpio-garagedoor).
+If you don't have reed switches or you want to have just one switch, please rather use [homebridge-rasppi-gpio-garagedoor](https://github.com/benlamonica/homebridge-rasppi-gpio-garagedoor).
 
 # Note about reliability
 You may observe incorrect door status on your phone and unexpected behavior of your garage door. It happens because the plugin has very limited knowledge of what is going on with the door. With 2 sensors it only knows when the door is closed or fully open. It does not know what happens between those states especially when you start using wall switches or remote controls while the door is operating.
@@ -63,7 +63,7 @@ Fields:
 * closedDoorSensorPin (required) - The physical GPIO pin that senses if the door is closed.
 * closedDoorSensorValue (optional) - 1 = ACTIVE_HIGH, 0 = ACTIVE_LOW. Defaults to 0 if not specified.
 * closedDoorResistor (optional) - 0 (default) = internal pull down and pull up resistors disabled, 1 = internal pull down resistor enabled, 2 = internal pull up resistor enabled. Use 0 if you have external resistor otherwise use 1 if your sensor is connected to 3.3V or use 2 if your sensor is connected to ground.
-* openDoorSensorPin (optional) - The physical GPIO pin that senses if the door is open. Do not specify if no sensor is present.
+* openDoorSensorPin (required) - The physical GPIO pin that senses if the door is open. Do not specify if no sensor is present.
 * openDoorSensorValue (optional) - Omit line if you don't have an open sensor. 1 = ACTIVE_HIGH, 0 = ACTIVE_LOW. Defaults to 0 if not specified.
 * openDoorResistor (optional) - 0 (default) = internal pull down and pull up resistors disabled, 1 = internal pull down resistor enabled, 2 = internal pull up resistor enabled. Use 0 if you have external resistor otherwise use 1 if your sensor is connected to 3.3V or use 2 if your sensor is connected to ground.
 * doorPollTime (optional) - Number of seconds to wait before polling door sensor pins to report if the door is open or closed. Defaults to 1 if not specified.

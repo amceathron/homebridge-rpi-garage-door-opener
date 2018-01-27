@@ -56,13 +56,14 @@ function RaspPiGPIOGarageDoorAccessory(log, config) {
   this.openDoorSensorPin = config["openDoorSensorPin"];
   this.openDoorSensorValue = config["openDoorSensorValue"] || 0;
   this.openDoorResistor = config["openDoorResistor"] || 0;
-  if (this.hasOpenSensor()) {
+  if (!this.hasOpenSensor()) {
+    log("ERROR! No OPEN SENSOR. Configuration is not supported.");
+    process.exit(1);
+  } else {
     log("Door open sensor: Configured");
     log("    Door open sensor pin: " + this.openDoorSensorPin);
     log("    Door open sensor val: " + pinValueToString(this.openDoorSensorValue));
     log("    Door open resistor: " + internalResistorToString(this.openDoorResistor));
-  } else {
-    log("Door open sensor: Not Configured");
   }
 
   this.sensorPollInMs = (config["doorPollTime"] || 1) * 1000;
