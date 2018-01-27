@@ -2,6 +2,9 @@
 Raspberry Pi GPIO garage door plugin for [Homebridge](https://github.com/nfarina/homebridge)
 
 # Before you start
+The project modifies a garage door opener that uses a single momentary push button mounted on the wall to move the garage door. The button moves and stops the door and also changes the direction.
+
+# Hardware components
 You will need the following hardware components for your project:
 * Raspberry Pi
 * Relay that will turn your garage door opener on and off
