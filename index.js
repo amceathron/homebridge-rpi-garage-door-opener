@@ -3,6 +3,7 @@
 var Service;
 var Characteristic;
 var DoorState;
+var HAPServerStatus;
 var process = require('process');
 var rpio = require('rpio');
         
@@ -10,6 +11,7 @@ module.exports = function(homebridge) {
   Service = homebridge.hap.Service;
   Characteristic = homebridge.hap.Characteristic;
   DoorState = homebridge.hap.Characteristic.CurrentDoorState;
+  HAPServerStatus = homebridge.hap.HAPServer.Status;
 
   homebridge.registerAccessory("homebridge-rpi-garage-door-opener", "RaspPiGPIOGarageDoor", RaspPiGPIOGarageDoorAccessory);
 };
@@ -29,13 +31,15 @@ function RaspPiGPIOGarageDoorAccessory(log, config) {
   this.relayOn = config["doorSwitchValue"];
   this.doorSwitchPressTimeInMs = (config["doorSwitchPressTime"] || 0.5) * 1000;
   this.relayIdleInMs = (config["doorSwitchIdleTime"] || 0.5) * 1000;
+  this.hasRelay = true;
   if (this.doorSwitchPin === undefined || this.relayOn === undefined) {
+    this.hasRelay = false;
     log("ERROR! No RELAY. Configuration is not supported.");
-    process.exit(1);
   } else {
     this.relayOff = 1-this.relayOn; //opposite of relayOn (O/1)
+    rpio.open(this.doorSwitchPin, rpio.OUTPUT, this.relayOff);
     log("Door switch pin: " + this.doorSwitchPin);
-    log("Door switch val: " + pinValueToString(this.relayOn));
+    log("Door switch val: " + this.pinValueToString(this.relayOn));
     log("Door switch press time in ms: " + this.doorSwitchPressTimeInMs);
     log("Door switch idle time in ms: " + this.relayIdleInMs);
   }
@@ -43,27 +47,30 @@ function RaspPiGPIOGarageDoorAccessory(log, config) {
   this.closedDoorSensorPin = config["closedDoorSensorPin"];
   this.closedDoorSensorValue = config["closedDoorSensorValue"] || 0;
   this.closedDoorResistor = config["closedDoorResistor"] || 0;
+  this.hasSensors = true;
   if (!this.hasClosedSensor()) {
+    this.hasSensors = false;
     log("ERROR! No CLOSED SENSOR. Configuration is not supported.");
-    process.exit(1);
   } else {
+    rpio.open(this.closedDoorSensorPin, rpio.INPUT, this.closedDoorResistor);
     log("Door closed sensor: Configured");
     log("    Door closed sensor pin: " + this.closedDoorSensorPin);
-    log("    Door closed sensor val: " + pinValueToString(this.closedDoorSensorValue));  
-    log("    Door closed resistor: " + internalResistorToString(this.closedDoorResistor));  
+    log("    Door closed sensor val: " + this.pinValueToString(this.closedDoorSensorValue));  
+    log("    Door closed resistor: " + this.internalResistorToString(this.closedDoorResistor));  
   }
 
   this.openDoorSensorPin = config["openDoorSensorPin"];
   this.openDoorSensorValue = config["openDoorSensorValue"] || 0;
   this.openDoorResistor = config["openDoorResistor"] || 0;
   if (!this.hasOpenSensor()) {
+    this.hasSensors = false;
     log("ERROR! No OPEN SENSOR. Configuration is not supported.");
-    process.exit(1);
   } else {
+    rpio.open(this.openDoorSensorPin, rpio.INPUT, this.openDoorResistor);
     log("Door open sensor: Configured");
     log("    Door open sensor pin: " + this.openDoorSensorPin);
-    log("    Door open sensor val: " + pinValueToString(this.openDoorSensorValue));
-    log("    Door open resistor: " + internalResistorToString(this.openDoorResistor));
+    log("    Door open sensor val: " + this.pinValueToString(this.openDoorSensorValue));
+    log("    Door open resistor: " + this.internalResistorToString(this.openDoorResistor));
   }
 
   this.sensorPollInMs = (config["doorPollTime"] || 1) * 1000;
@@ -71,94 +78,55 @@ function RaspPiGPIOGarageDoorAccessory(log, config) {
   log("Sensor poll in ms: " + this.sensorPollInMs);
   log("Door opens in ms: " + this.doorOpensInMs);
 
-  this.initService();
-}
+  this.cachedState = this.hasSensors? this.determineCurrentDoorState() : DoorState.CLOSED;
+  this.log("Initial door state: " + this.doorStateToString(this.cachedState));
+  this.targetState = this.cachedState === DoorState.CLOSED ? DoorState.CLOSED : DoorState.OPEN;
+  this.operating = false;
+  this.canActivateRelay = true;
+  this.setFinalDoorStateTimer = null;
+  this.finalStatePollCounter = (this.doorOpensInMs - this.doorOpensInMs % this.sensorPollInMs) / this.sensorPollInMs;
+  this.finalStatePollInMs = (this.doorOpensInMs - this.doorOpensInMs % this.finalStatePollCounter) / this.finalStatePollCounter + 1;
 
-function pinValueToString(value) {
-  switch (value) {
-    case 0:
-      return "Active Low";
-    case 1:
-      return "Active High";
-    default:
-      return "UNDEFINED (" + value + ")";
-  }
-}
-
-function internalResistorToString(state) {
-  switch (state) {
-    case rpio.PULL_OFF:
-      return "Disabled";
-    case rpio.PULL_DOWN:
-      return "Pull Down";
-    case rpio.PULL_UP:
-      return "Pull Up";
-    default:
-      return "UNDEFINED (" + state + ")";
+  if (!this.hasRelay || !this.hasSensors) {
+    this.log("ERROR! THE PLUGIN WILL NOT WORK AS EXPECTED. IT WILL RETURN COMMUNICATION ERRORS.");
   }
 }
 
 RaspPiGPIOGarageDoorAccessory.prototype = {
 
-  initService: function() {
-    this.garageDoorOpener = new Service.GarageDoorOpener(this.name,this.name);
-    this.currentDoorState = this.garageDoorOpener.getCharacteristic(DoorState);
-    this.currentDoorState.on('get', this.getState.bind(this));
-    this.targetDoorState = this.garageDoorOpener.getCharacteristic(Characteristic.TargetDoorState);
-    this.targetDoorState.on('set', this.setTargetState.bind(this));
-    this.targetDoorState.on('get', this.getTargetState.bind(this));
-
+  getServices: function() {
     this.infoService = new Service.AccessoryInformation();
     this.infoService
       .setCharacteristic(Characteristic.Manufacturer, "Opensource Community")
       .setCharacteristic(Characteristic.Model, "RaspPi GPIO GarageDoor")
-      .setCharacteristic(Characteristic.SerialNumber, "Version 1.0.0");
+      .setCharacteristic(Characteristic.SerialNumber, "0")
+      .setCharacteristic(Characteristic.FirmwareRevision, this.version);
 
-    rpio.open(this.doorSwitchPin, rpio.OUTPUT, this.relayOff);
-    rpio.open(this.closedDoorSensorPin, rpio.INPUT, this.closedDoorResistor);
-    if (this.hasOpenSensor())
-      rpio.open(this.openDoorSensorPin, rpio.INPUT, this.openDoorResistor);
+    this.openerService = new Service.GarageDoorOpener(this.name,this.name);
 
-    this.cachedState = this.determineCurrentDoorState();
-    this.targetState = this.cachedState === DoorState.CLOSED ? DoorState.CLOSED : DoorState.OPEN;
-    this.operating = false;
-    this.canActivateRelay = true;
-    this.setFinalDoorStateTimer = null;
-    this.finalStatePollCounter = (this.doorOpensInMs - this.doorOpensInMs % this.sensorPollInMs) / this.sensorPollInMs;
-    this.finalStatePollInMs = (this.doorOpensInMs - this.doorOpensInMs % this.finalStatePollCounter) / this.finalStatePollCounter + 1;
-    setInterval(this.monitorDoorState.bind(this), this.sensorPollInMs);
+    this.currentDoorState = this.openerService.getCharacteristic(Characteristic.CurrentDoorState);
+    this.targetDoorState = this.openerService.getCharacteristic(Characteristic.TargetDoorState);
 
-    this.log("Initial door state: " + this.doorStateToString(this.cachedState));
+    if (this.hasSensors)
+      setInterval(this.monitorDoorState.bind(this), this.sensorPollInMs);
+    else
+      this.currentDoorState.on('get',this.getCurrentStateError.bind(this));
+
+    this.currentDoorState.on('change',this.currentStateChange.bind(this));
+
+    if (this.hasRelay && this.hasSensors)
+      this.targetDoorState.on('set', this.setTargetState.bind(this));
+    else
+      this.targetDoorState.on('set', this.setTargetStateError.bind(this));
+
     this.currentDoorState.updateValue(this.cachedState);
     this.targetDoorState.updateValue(this.targetState);
+    
+    return [this.infoService, this.openerService];
   },
 
-  targetDoorStateToString: function(state) {
-    switch (state) {
-      case DoorState.OPEN:
-        return "OPEN";
-      case DoorState.CLOSED:
-        return "CLOSE";
-      default:
-        return "UNKNOWN (" + state + ")";
-    }
-  },
-
-  doorStateToString: function(state) {
-    switch (state) {
-      case DoorState.OPEN:
-        return "OPEN";
-      case DoorState.CLOSED:
-        return "CLOSED";
-      case DoorState.STOPPED:
-        return "STOPPED";
-      case DoorState.OPENING:
-        return "OPENING";
-      case DoorState.CLOSING:
-        return "CLOSING";
-      default:
-        return "UNKNOWN (" + state + ")";
-    }
+  currentStateChange: function(state) {
+    this.log("State changed from " + this.doorStateToString(state.oldValue) + " to " + this.doorStateToString(state.newValue));
   },
 
   hasOpenSensor : function() {
@@ -268,23 +236,70 @@ RaspPiGPIOGarageDoorAccessory.prototype = {
           this.moveDoors(execute);
       } else {
         this.log("Attempting to " + this.targetDoorStateToString(target) + " the door while relay is operating. Ignoring.");
-        error = new Error("Ignoring request while the relay is operating");
+        error = new Error(HAPServerStatus.RESOURCE_BUSY);
       }
     }
     callback(error);
   },
 
-  getTargetState: function(callback) {
-    callback(null, this.targetState);
+  setTargetStateError: function(target, callback) {
+    callback(new Error(HAPServerStatus.SERVICE_COMMUNICATION_FAILURE));
   },
 
-  getState: function(callback) {
-    let state = this.determineCurrentDoorState();
-    this.log("Informing that the door is " + this.doorStateToString(state)); 
-    callback(null, state);
+  getCurrentStateError: function(callback) {
+    callback(new Error(HAPServerStatus.SERVICE_COMMUNICATION_FAILURE));
   },
 
-  getServices: function() {
-    return [this.infoService, this.garageDoorOpener];
+  targetDoorStateToString: function(state) {
+    switch (state) {
+      case DoorState.OPEN:
+        return "OPEN";
+      case DoorState.CLOSED:
+        return "CLOSE";
+      default:
+        return "UNKNOWN (" + state + ")";
+    }
+  },
+
+  doorStateToString: function(state) {
+    switch (state) {
+      case DoorState.OPEN:
+        return "OPEN";
+      case DoorState.CLOSED:
+        return "CLOSED";
+      case DoorState.STOPPED:
+        return "STOPPED";
+      case DoorState.OPENING:
+        return "OPENING";
+      case DoorState.CLOSING:
+        return "CLOSING";
+      default:
+        return "UNKNOWN (" + state + ")";
+    }
+  },
+
+  pinValueToString: function(value) {
+    switch (value) {
+      case 0:
+        return "Active Low";
+      case 1:
+        return "Active High";
+      default:
+        return "UNDEFINED (" + value + ")";
+    }
+  },
+  
+  internalResistorToString: function(state) {
+    switch (state) {
+      case rpio.PULL_OFF:
+        return "Disabled";
+      case rpio.PULL_DOWN:
+        return "Pull Down";
+      case rpio.PULL_UP:
+        return "Pull Up";
+      default:
+        return "UNDEFINED (" + state + ")";
+    }
   }
+  
 };
