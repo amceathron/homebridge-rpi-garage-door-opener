@@ -115,7 +115,11 @@ RaspPiGPIOGarageDoorAccessory.prototype = {
     this.currentDoorState.updateValue(this.cachedSensorState);
     this.targetDoorState.updateValue(this.cachedSensorState === DoorState.CLOSED ? TargetState.CLOSED : TargetState.OPEN);
     
-    return [this.infoService, this.openerService];
+    this.controlService = new Service.Switch("Garage Door Control");
+    this.doorControlState = this.controlService.getCharacteristic(Characteristic.On);
+    this.doorControlState.on('set', this.setControlState.bind(this));
+
+    return [this.infoService, this.openerService, this.controlService];
   },
 
   setTargetStateError: function(target, callback) {
@@ -195,6 +199,17 @@ RaspPiGPIOGarageDoorAccessory.prototype = {
       return DoorState.CLOSED;
     else
       return rpio.read(this.openDoorSensorPin) === this.openDoorSensorValue ? DoorState.OPEN : DoorState.STOPPED;
+  },
+
+  setControlState: function(target, callback) {
+    this.log("Turning control switch " + (target ? "ON" : "OFF"));
+    if (target) {
+      this.turnRelayOn();
+      setTimeout(function() {
+        this.doorControlState.updateValue(false);
+      }.bind(this), this.doorSwitchPressTimeInMs);
+    }
+    callback();
   },
 
   turnRelayOn: function(count = 1) {
